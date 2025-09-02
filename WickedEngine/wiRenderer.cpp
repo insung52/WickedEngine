@@ -12100,6 +12100,9 @@ void DDGI(
 	push.frameIndex = scene.ddgi.frame_index;
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
 	push.blendSpeed = GetDDGIBlendSpeed();
+	push.shLevel = static_cast<uint>(scene.ddgi.sh_level);
+	push.shCoefficients = DDGI_SH_COEFFICIENTS_TABLE[scene.ddgi.sh_level];
+	push.padding = {};
 
 	// Ray allocation:
 	{

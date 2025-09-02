@@ -13,12 +13,46 @@ static const uint DDGI_RAY_BUCKET_COUNT = 4; // ray count per bucket
 
 #define DDGI_LINEAR_BLENDING
 
+// SH Level configuration - maximum supported level for dynamic runtime selection
+#define DDGI_MAX_SH_LEVEL 4
+#define DDGI_MAX_SH_COEFFICIENTS 25  // L4: 25 coefficients (maximum)
+
+// Runtime SH coefficient count lookup table (for CPU-side usage)
+static const uint DDGI_SH_COEFFICIENTS_TABLE[5] = { 1, 4, 9, 16, 25 };
+
+// For backward compatibility and static configurations
+#ifndef DDGI_SH_LEVEL
+#define DDGI_SH_LEVEL 1  // Default to L1 (4 coefficients)
+#endif
+
+#if DDGI_SH_LEVEL == 0
+	#define DDGI_SH_COEFFICIENTS 1   
+	#define DDGI_SH_TYPE L0_RGB
+#elif DDGI_SH_LEVEL == 1  
+	#define DDGI_SH_COEFFICIENTS 4   
+	#define DDGI_SH_TYPE L1_RGB
+#elif DDGI_SH_LEVEL == 2
+	#define DDGI_SH_COEFFICIENTS 9     
+	#define DDGI_SH_TYPE L2_RGB
+#elif DDGI_SH_LEVEL == 3
+	#define DDGI_SH_COEFFICIENTS 16  
+	#define DDGI_SH_TYPE L3_RGB
+#elif DDGI_SH_LEVEL == 4
+	#define DDGI_SH_COEFFICIENTS 25  
+	#define DDGI_SH_TYPE L4_RGB
+#else
+	#error "Unsupported DDGI_SH_LEVEL. Must be 0, 1, 2, 3, or 4."
+#endif
+
 struct DDGIPushConstants
 {
 	uint instanceInclusionMask;
 	uint frameIndex;
 	uint rayCount;
 	float blendSpeed;
+	uint shLevel;          // Current SH level (0-4)
+	uint shCoefficients;   // Number of SH coefficients for current level
+	uint2 padding;         // Padding for alignment
 };
 
 struct DDGIRayData
@@ -151,7 +185,8 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 
 	// Note: the quality seems to be a lot better when weighting the whole SH instead of
 	//	blending irradiance, specular and dld separately
-	SH::L1_RGB sum_sh = SH::L1_RGB::Zero();
+	// Use L4_RGB for dynamic SH level support
+	SH::L4_RGB sum_sh = SH::L4_RGB::Zero();
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
 	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp());
@@ -254,7 +289,31 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		// Trilinear weights
 		weight *= trilinear.x * trilinear.y * trilinear.z;
 
-		sum_sh = SH::Add(sum_sh, SH::Multiply(probe.radiance.Unpack(), weight));
+		// Unpack probe radiance from raw uint array to L4_RGB
+		SH::L4_RGB::Packed packed_radiance;
+		// Safely copy from probe buffer to packed format
+		const uint packed_size = 38;
+		[unroll]
+		for (uint j = 0; j < packed_size; ++j)
+		{
+			packed_radiance.C[j] = probe.radiance[j];
+		}
+		SH::L4_RGB probe_sh = packed_radiance.Unpack();
+		
+		// Zero out unused coefficients based on current SH level
+		uint sh_level = GetScene().ddgi.sh_level;
+		uint max_coeffs = (sh_level == 0) ? 1 : 
+		                  (sh_level == 1) ? 4 : 
+		                  (sh_level == 2) ? 9 : 
+		                  (sh_level == 3) ? 16 : 25;
+		
+		[unroll(25)]
+		for (uint i = max_coeffs; i < 25; ++i)
+		{
+			probe_sh.C[i] = half3(0, 0, 0);
+		}
+		
+		sum_sh = SH::Add(sum_sh, SH::Multiply(probe_sh, weight));
 
 		sum_weight += weight;
 	}
@@ -263,9 +322,35 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 	{
 		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
 
-		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N) / PI;
-
-		SH::ApproximateDirectionalLight(sum_sh, out_dominant_lightdir, out_dominant_lightcolor);
+		// Convert to appropriate SH level for irradiance calculation
+		uint sh_level = GetScene().ddgi.sh_level;
+		half3 net_irradiance;
+		
+		if (sh_level <= 1)
+		{
+			// Use L1_RGB for L0 and L1 levels
+			SH::L1_RGB sum_l1;
+			sum_l1.C[0] = sum_sh.C[0];
+			sum_l1.C[1] = (sh_level >= 1) ? sum_sh.C[1] : half3(0,0,0);
+			sum_l1.C[2] = (sh_level >= 1) ? sum_sh.C[2] : half3(0,0,0);
+			sum_l1.C[3] = (sh_level >= 1) ? sum_sh.C[3] : half3(0,0,0);
+			
+			net_irradiance = SH::CalculateIrradiance(sum_l1, N) / PI;
+			SH::ApproximateDirectionalLight(sum_l1, out_dominant_lightdir, out_dominant_lightcolor);
+		}
+		else
+		{
+			// Use L2_RGB for L2+ levels
+			SH::L2_RGB sum_l2;
+			[unroll]
+			for (uint i = 0; i < 9; ++i)
+			{
+				if (i < 25) sum_l2.C[i] = sum_sh.C[i];
+			}
+			
+			net_irradiance = SH::CalculateIrradiance(sum_l2, N) / PI;
+			SH::ApproximateDirectionalLight(sum_l2, out_dominant_lightdir, out_dominant_lightcolor);
+		}
 
 		// bending with normal direction to push dld above surface level since light can't fall to surface from behind
 		out_dominant_lightdir = normalize(out_dominant_lightdir + N * 0.8);

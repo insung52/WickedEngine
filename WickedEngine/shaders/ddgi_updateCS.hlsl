@@ -228,18 +228,174 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 
 	if (groupIndex == 0)
 	{
-		SH::L1_RGB radiance = SH::L1_RGB::Zero();
-		for (int x = 0; x < RESOLUTION; ++x)
+		if (push.shLevel == 0)
 		{
-			for (int y = 0; y < RESOLUTION; ++y)
+			// L0 (1 coefficient) - constant ambient only
+			SH::L0_RGB radiance = SH::L0_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
 			{
-				const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
-				float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
-				radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL0_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L0 into L4 format for storage
+			SH::L4_RGB l4_storage = SH::L4_RGB::Zero();
+			l4_storage.C[0] = radiance.C[0];
+			SH::L4_RGB::Packed packed = l4_storage.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
 			}
 		}
-		radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
-		ddgiProbeBuffer[probeIndex].radiance = radiance.Pack();
+		else if (push.shLevel == 1)
+		{
+			// L1 (4 coefficients) - original implementation
+			SH::L1_RGB radiance = SH::L1_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
+			{
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L1 into L4 format for storage
+			SH::L4_RGB l4_storage = SH::L4_RGB::Zero();
+			l4_storage.C[0] = radiance.C[0];
+			l4_storage.C[1] = radiance.C[1];
+			l4_storage.C[2] = radiance.C[2];
+			l4_storage.C[3] = radiance.C[3];
+			SH::L4_RGB::Packed packed = l4_storage.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
+			}
+		}
+		else if (push.shLevel == 2)
+		{
+			// L2 (9 coefficients) - higher quality with quadratic terms
+			SH::L2_RGB radiance = SH::L2_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
+			{
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL2_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L2 into L4 format for storage (use all 9 coefficients)
+			SH::L4_RGB l4_storage = SH::L4_RGB::Zero();
+			[unroll]
+			for (int i = 0; i < 9; ++i)
+			{
+				if (i < 25) l4_storage.C[i] = radiance.C[i];
+			}
+			SH::L4_RGB::Packed packed = l4_storage.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
+			}
+		}
+		else if (push.shLevel == 3)
+		{
+			// L3 (16 coefficients) - cubic SH with higher detail
+			SH::L3_RGB radiance = SH::L3_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
+			{
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL3_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L3 into L4 format for storage (use all 16 coefficients)
+			SH::L4_RGB l4_storage = SH::L4_RGB::Zero();
+			[unroll]
+			for (int i = 0; i < 16; ++i)
+			{
+				if (i < 25) l4_storage.C[i] = radiance.C[i];
+			}
+			SH::L4_RGB::Packed packed = l4_storage.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
+			}
+		}
+		else if (push.shLevel == 4)
+		{
+			// L4 (25 coefficients) - quartic SH with maximum detail
+			SH::L4_RGB radiance = SH::L4_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
+			{
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL4_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L4 directly for storage (use all 25 coefficients)
+			SH::L4_RGB::Packed packed = radiance.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
+			}
+		}
+		else
+		{
+			// Default fallback to L1
+			SH::L1_RGB radiance = SH::L1_RGB::Zero();
+			for (int x = 0; x < RESOLUTION; ++x)
+			{
+				for (int y = 0; y < RESOLUTION; ++y)
+				{
+					const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+					float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+					radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
+				}
+			}
+			radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+			// Pack L1 into L4 format for storage
+			SH::L4_RGB l4_storage = SH::L4_RGB::Zero();
+			l4_storage.C[0] = radiance.C[0];
+			l4_storage.C[1] = radiance.C[1];
+			l4_storage.C[2] = radiance.C[2];
+			l4_storage.C[3] = radiance.C[3];
+			SH::L4_RGB::Packed packed = l4_storage.Pack();
+			// Safely copy packed data to probe buffer
+			const uint packed_size = 38;
+			[unroll]
+			for (uint i = 0; i < packed_size; ++i)
+			{
+				ddgiProbeBuffer[probeIndex].radiance[i] = packed.C[i];
+			}
+		}
 		
 		//draw_line(ddgi_probe_position(probeCoord), ddgi_probe_position(probeCoord) + OptimalLinearDirection(radiance));
 	}

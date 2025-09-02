@@ -56,6 +56,9 @@ struct alignas(16) ShaderScene
 
 		float3 cell_size_rcp;
 		float smooth_backface;
+		
+		uint sh_level;
+		float3 padding2;
 	};
 	DDGI ddgi;
 
@@ -1774,7 +1777,7 @@ namespace SH
 
 struct alignas(16) DDGIProbe
 {
-	SH::L1_RGB::Packed radiance;
+	uint radiance[38];  // Raw packed data for L4_RGB (25*3 half = 75 halves = 38 uints rounded up)
 	uint2 offset;
 };
 

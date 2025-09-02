@@ -903,13 +903,13 @@ namespace wi::input
 		if (str == nullptr)
 			return BUTTON_NONE;
 
-		if (strcmp(str, "■") == 0)
+		if (strcmp(str, "Square") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_SQUARE;
-		if (strcmp(str, "✖") == 0)
+		if (strcmp(str, "Cross") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_CROSS;
-		if (strcmp(str, "●") == 0)
+		if (strcmp(str, "Circle") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_CIRCLE;
-		if (strcmp(str, "▲") == 0)
+		if (strcmp(str, "Triangle") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE;
 		if (strcmp(str, "L1") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_L1;
@@ -955,13 +955,13 @@ namespace wi::input
 		if (strcmp(str, "Start") == 0)
 			return GAMEPAD_BUTTON_XBOX_START;
 
-		if (strcmp(str, "Dpad ↑") == 0)
+		if (strcmp(str, "Dpad Up") == 0)
 			return GAMEPAD_BUTTON_UP;
-		if (strcmp(str, "Dpad ←") == 0)
+		if (strcmp(str, "Dpad Left") == 0)
 			return GAMEPAD_BUTTON_LEFT;
-		if (strcmp(str, "Dpad ↓") == 0)
+		if (strcmp(str, "Dpad Down") == 0)
 			return GAMEPAD_BUTTON_DOWN;
-		if (strcmp(str, "Dpad →") == 0)
+		if (strcmp(str, "Dpad Right") == 0)
 			return GAMEPAD_BUTTON_RIGHT;
 
 		if (strcmp(str, "Gamepad 1") == 0)
@@ -993,21 +993,21 @@ namespace wi::input
 		if (strcmp(str, "Gamepad 14") == 0)
 			return GAMEPAD_BUTTON_14;
 
-		if (strcmp(str, "Left Stick ↑") == 0)
+		if (strcmp(str, "Left Stick Up") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP;
-		if (strcmp(str, "Left Stick ←") == 0)
+		if (strcmp(str, "Left Stick Left") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT;
-		if (strcmp(str, "Left Stick ↓") == 0)
+		if (strcmp(str, "Left Stick Down") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN;
-		if (strcmp(str, "Left Stick →") == 0)
+		if (strcmp(str, "Left Stick Right") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT;
-		if (strcmp(str, "Right Stick ↑") == 0)
+		if (strcmp(str, "Right Stick Up") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP;
-		if (strcmp(str, "Right Stick ←") == 0)
+		if (strcmp(str, "Right Stick Left") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT;
-		if (strcmp(str, "Right Stick ↓") == 0)
+		if (strcmp(str, "Right Stick Down") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN;
-		if (strcmp(str, "Right Stick →") == 0)
+		if (strcmp(str, "Right Stick Right") == 0)
 			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT;
 
 		if (strcmp(str, "Left Trigger") == 0)
@@ -1021,18 +1021,18 @@ namespace wi::input
 			return MOUSE_BUTTON_RIGHT;
 		if (strcmp(str, "Middle Mouse Button") == 0)
 			return MOUSE_BUTTON_MIDDLE;
-		if (strcmp(str, "Mouse Wheel ↑") == 0)
+		if (strcmp(str, "Mouse Wheel Up") == 0)
 			return MOUSE_SCROLL_AS_BUTTON_UP;
-		if (strcmp(str, "Mouse Wheel ↓") == 0)
+		if (strcmp(str, "Mouse Wheel Down") == 0)
 			return MOUSE_SCROLL_AS_BUTTON_DOWN;
 
-		if (strcmp(str, "↑") == 0)
+		if (strcmp(str, "Up") == 0)
 			return KEYBOARD_BUTTON_UP;
-		if (strcmp(str, "←") == 0)
+		if (strcmp(str, "Left") == 0)
 			return KEYBOARD_BUTTON_LEFT;
-		if (strcmp(str, "↓") == 0)
+		if (strcmp(str, "Down") == 0)
 			return KEYBOARD_BUTTON_DOWN;
-		if (strcmp(str, "→") == 0)
+		if (strcmp(str, "Right") == 0)
 			return KEYBOARD_BUTTON_RIGHT;
 
 		if (strcmp(str, "Space") == 0)
@@ -1150,10 +1150,10 @@ namespace wi::input
 		{
 			switch (button)
 			{
-			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_SQUARE: return "■";
-			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CROSS: return "✖";
-			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CIRCLE: return "●";
-			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE: return "▲";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_SQUARE: return "Square";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CROSS: return "Cross";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CIRCLE: return "Circle";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE: return "Triangle";
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_L1: return "L1";
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_L2: return "L2";
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_R1: return "R1";
@@ -1191,10 +1191,10 @@ namespace wi::input
 
 		switch (button)
 		{
-		case wi::input::GAMEPAD_BUTTON_UP: return "Dpad ↑";
-		case wi::input::GAMEPAD_BUTTON_LEFT: return "Dpad ←";
-		case wi::input::GAMEPAD_BUTTON_DOWN: return "Dpad ↓";
-		case wi::input::GAMEPAD_BUTTON_RIGHT: return "Dpad →";
+		case wi::input::GAMEPAD_BUTTON_UP: return "Dpad Up";
+		case wi::input::GAMEPAD_BUTTON_LEFT: return "Dpad Left";
+		case wi::input::GAMEPAD_BUTTON_DOWN: return "Dpad Down";
+		case wi::input::GAMEPAD_BUTTON_RIGHT: return "Dpad Right";
 		case wi::input::GAMEPAD_BUTTON_1: return "Gamepad 1";
 		case wi::input::GAMEPAD_BUTTON_2: return "Gamepad 2";
 		case wi::input::GAMEPAD_BUTTON_3: return "Gamepad 3";
@@ -1209,25 +1209,25 @@ namespace wi::input
 		case wi::input::GAMEPAD_BUTTON_12: return "Gamepad 12";
 		case wi::input::GAMEPAD_BUTTON_13: return "Gamepad 13";
 		case wi::input::GAMEPAD_BUTTON_14: return "Gamepad 14";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP: return "Left Stick ↑";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT: return "Left Stick ←";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN: return "Left Stick ↓";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT: return "Left Stick →";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP: return "Right Stick ↑";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT: return "Right Stick ←";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN: return "Right Stick ↓";
-		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT: return "Right Stick →";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP: return "Left Stick Up";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT: return "Left Stick Left";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN: return "Left Stick Down";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT: return "Left Stick Right";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP: return "Right Stick Up";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT: return "Right Stick Left";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN: return "Right Stick Down";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT: return "Right Stick Right";
 		case wi::input::GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON: return "Left Trigger";
 		case wi::input::GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON: return "Right Trigger";
 		case wi::input::MOUSE_BUTTON_LEFT: return "Left Mouse Button";
 		case wi::input::MOUSE_BUTTON_RIGHT: return "Right Mouse Button";
 		case wi::input::MOUSE_BUTTON_MIDDLE: return "Middle Mouse Button";
-		case wi::input::MOUSE_SCROLL_AS_BUTTON_UP: return "Mouse Wheel ↑";
-		case wi::input::MOUSE_SCROLL_AS_BUTTON_DOWN: return "Mouse Wheel ↓";
-		case wi::input::KEYBOARD_BUTTON_UP: return "↑";
-		case wi::input::KEYBOARD_BUTTON_DOWN: return "↓";
-		case wi::input::KEYBOARD_BUTTON_LEFT: return "←";
-		case wi::input::KEYBOARD_BUTTON_RIGHT: return "→";
+		case wi::input::MOUSE_SCROLL_AS_BUTTON_UP: return "Mouse Wheel Up";
+		case wi::input::MOUSE_SCROLL_AS_BUTTON_DOWN: return "Mouse Wheel Down";
+		case wi::input::KEYBOARD_BUTTON_UP: return "Up";
+		case wi::input::KEYBOARD_BUTTON_DOWN: return "Down";
+		case wi::input::KEYBOARD_BUTTON_LEFT: return "Left";
+		case wi::input::KEYBOARD_BUTTON_RIGHT: return "Right";
 		case wi::input::KEYBOARD_BUTTON_SPACE: return "Space";
 		case wi::input::KEYBOARD_BUTTON_RSHIFT: return "Right Shift";
 		case wi::input::KEYBOARD_BUTTON_LSHIFT: return "Left Shift";

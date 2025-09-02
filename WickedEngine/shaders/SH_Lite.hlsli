@@ -70,7 +70,83 @@ static const half BasisL2_M0 = sqrt(5) / (4 * SqrtPi);
 static const half BasisL2_M1 = sqrt(15) / (2 * SqrtPi);
 static const half BasisL2_M2 = sqrt(15) / (4 * SqrtPi);
 
+// L3 basis functions (16 coefficients total)
+static const half BasisL3_MN3 = sqrt(35) / (4 * SqrtPi);      // Y_3^-3
+static const half BasisL3_MN2 = sqrt(105) / (2 * SqrtPi);     // Y_3^-2  
+static const half BasisL3_MN1 = sqrt(21) / (4 * SqrtPi);      // Y_3^-1
+static const half BasisL3_M0 = sqrt(7) / (4 * SqrtPi);        // Y_3^0
+static const half BasisL3_M1 = sqrt(21) / (4 * SqrtPi);       // Y_3^1
+static const half BasisL3_M2 = sqrt(105) / (4 * SqrtPi);      // Y_3^2
+static const half BasisL3_M3 = sqrt(35) / (4 * SqrtPi);       // Y_3^3
+
+// L4 basis functions (25 coefficients total)  
+static const half BasisL4_MN4 = 3 * sqrt(35) / (4 * SqrtPi);  // Y_4^-4
+static const half BasisL4_MN3 = 3 * sqrt(35) / (2 * SqrtPi);  // Y_4^-3
+static const half BasisL4_MN2 = 3 * sqrt(5) / (2 * SqrtPi);   // Y_4^-2
+static const half BasisL4_MN1 = 3 * sqrt(5) / (4 * SqrtPi);   // Y_4^-1
+static const half BasisL4_M0 = 3 / (4 * SqrtPi);             // Y_4^0
+static const half BasisL4_M1 = 3 * sqrt(5) / (4 * SqrtPi);    // Y_4^1
+static const half BasisL4_M2 = 3 * sqrt(5) / (4 * SqrtPi);    // Y_4^2
+static const half BasisL4_M3 = 3 * sqrt(35) / (4 * SqrtPi);   // Y_4^3
+static const half BasisL4_M4 = 3 * sqrt(35) / (8 * SqrtPi);   // Y_4^4
+
 // Core SH types containing the coefficients
+struct L0
+{
+	static const uint NumCoefficients = 1;
+
+	half C[NumCoefficients];
+
+	static L0 Zero()
+	{
+		return (L0)0;
+	}
+	static L0 Create(half c0)
+	{
+		L0 ret;
+		ret.C[0] = c0;
+		return ret;
+	}
+};
+
+struct L0_RGB
+{
+	static const uint NumCoefficients = 1;
+
+	half3 C[NumCoefficients];
+
+	static L0_RGB Zero()
+	{
+		return (L0_RGB)0;
+	}
+	static L0_RGB Create(half3 c0)
+	{
+		L0_RGB ret;
+		ret.C[0] = c0;
+		return ret;
+	}
+	
+	struct Packed
+	{
+		uint2 C; // Pack 3 half values into 2 uints
+		L0_RGB Unpack();
+	};
+	Packed Pack()
+	{
+		Packed ret;
+		ret.C[0] = f32tof16(C[0].x) | (f32tof16(C[0].y) << 16u);
+		ret.C[1] = f32tof16(C[0].z);
+		return ret;
+	}
+};
+
+L0_RGB L0_RGB::Packed::Unpack()
+{
+	L0_RGB ret;
+	ret.C[0] = half3(f16tof32(C[0]), f16tof32(C[0] >> 16u), f16tof32(C[1]));
+	return ret;
+}
+
 struct L1
 {
 	static const uint NumCoefficients = 4;
@@ -177,12 +253,172 @@ struct L2_RGB
 	}
 };
 
+struct L3
+{
+	static const uint NumCoefficients = 16;
+
+	half C[NumCoefficients];
+
+	static L3 Zero()
+	{
+		return (L3)0;
+	}
+};
+
+struct L3_RGB
+{
+	static const uint NumCoefficients = 16;
+
+	half3 C[NumCoefficients];
+
+	static L3_RGB Zero()
+	{
+		return (L3_RGB)0;
+	}
+	
+	struct Packed
+	{
+		uint C[24]; // 16*3 half values = 48 halves = 24 uints (2 halves per uint)
+		L3_RGB Unpack();
+	};
+	Packed Pack()
+	{
+		Packed ret;
+		[unroll]
+		for (uint i = 0; i < NumCoefficients; ++i)
+		{
+			uint base = (i * 3) / 2;
+			if ((i * 3) % 2 == 0)
+			{
+				ret.C[base] = f32tof16(C[i].x) | (f32tof16(C[i].y) << 16u);
+				if (base + 1 < 24)
+					ret.C[base + 1] = f32tof16(C[i].z);
+			}
+			else
+			{
+				if (base < 24)
+					ret.C[base] |= f32tof16(C[i].x) << 16u;
+				if (base + 1 < 24)
+					ret.C[base + 1] = f32tof16(C[i].y) | (f32tof16(C[i].z) << 16u);
+			}
+		}
+		return ret;
+	}
+};
+
+L3_RGB L3_RGB::Packed::Unpack()
+{
+	L3_RGB ret = L3_RGB::Zero();
+	[unroll]
+	for (uint i = 0; i < L3_RGB::NumCoefficients; ++i)
+	{
+		uint base = (i * 3) / 2;
+		if ((i * 3) % 2 == 0)
+		{
+			half z_val = (base + 1 < 24) ? f16tof32(C[base + 1]) : 0.0;
+			ret.C[i] = half3(f16tof32(C[base]), f16tof32(C[base] >> 16u), z_val);
+		}
+		else
+		{
+			half y_val = (base + 1 < 24) ? f16tof32(C[base + 1]) : 0.0;
+			half z_val = (base + 1 < 24) ? f16tof32(C[base + 1] >> 16u) : 0.0;
+			ret.C[i] = half3(f16tof32(C[base] >> 16u), y_val, z_val);
+		}
+	}
+	return ret;
+}
+
+struct L4
+{
+	static const uint NumCoefficients = 25;
+
+	half C[NumCoefficients];
+
+	static L4 Zero()
+	{
+		return (L4)0;
+	}
+};
+
+struct L4_RGB
+{
+	static const uint NumCoefficients = 25;
+
+	half3 C[NumCoefficients];
+
+	static L4_RGB Zero()
+	{
+		return (L4_RGB)0;
+	}
+	
+	struct Packed
+	{
+		uint C[38]; // 25*3 half values = 75 halves = 38 uints (rounded up, 2 halves per uint)
+		L4_RGB Unpack();
+	};
+	Packed Pack()
+	{
+		Packed ret = (Packed)0;
+		[unroll]
+		for (uint i = 0; i < min(NumCoefficients, 25); ++i)
+		{
+			uint base = (i * 3) / 2;
+			if (base < 38 && (i * 3) % 2 == 0)
+			{
+				ret.C[base] = f32tof16(C[i].x) | (f32tof16(C[i].y) << 16u);
+				if (base + 1 < 38)
+					ret.C[base + 1] = f32tof16(C[i].z);
+			}
+			else if (base < 38)
+			{
+				ret.C[base] |= f32tof16(C[i].x) << 16u;
+				if (base + 1 < 38)
+					ret.C[base + 1] = f32tof16(C[i].y) | (f32tof16(C[i].z) << 16u);
+			}
+		}
+		return ret;
+	}
+};
+
+L4_RGB L4_RGB::Packed::Unpack()
+{
+	L4_RGB ret = L4_RGB::Zero();
+	[unroll]
+	for (uint i = 0; i < min(L4_RGB::NumCoefficients, 25); ++i)
+	{
+		uint base = (i * 3) / 2;
+		if (base < 38 && (i * 3) % 2 == 0)
+		{
+			half z_val = (base + 1 < 38) ? f16tof32(C[base + 1]) : 0.0;
+			ret.C[i] = half3(f16tof32(C[base]), f16tof32(C[base] >> 16u), z_val);
+		}
+		else if (base < 38)
+		{
+			half x_val = f16tof32(C[base] >> 16u);
+			half y_val = (base + 1 < 38) ? f16tof32(C[base + 1]) : 0.0;
+			half z_val = (base + 1 < 38) ? f16tof32(C[base + 1] >> 16u) : 0.0;
+			ret.C[i] = half3(x_val, y_val, z_val);
+		}
+		else
+		{
+			ret.C[i] = half3(0, 0, 0);
+		}
+	}
+	return ret;
+}
+
 // Sum two sets of SH coefficients
 L1 Add(L1 a, L1 b)
 {
     [unroll]
     for(uint i = 0; i < L1::NumCoefficients; ++i)
         a.C[i] += b.C[i];
+    return a;
+}
+
+L0_RGB Add(L0_RGB a, L0_RGB b)
+{
+    a.C[0] += b.C[0];
     return a;
 }
 
@@ -206,6 +442,22 @@ L2_RGB Add(L2_RGB a, L2_RGB b)
 {
     [unroll]
     for(uint i = 0; i < L2_RGB::NumCoefficients; ++i)
+        a.C[i] += b.C[i];
+    return a;
+}
+
+L3_RGB Add(L3_RGB a, L3_RGB b)
+{
+    [unroll]
+    for(uint i = 0; i < L3_RGB::NumCoefficients; ++i)
+        a.C[i] += b.C[i];
+    return a;
+}
+
+L4_RGB Add(L4_RGB a, L4_RGB b)
+{
+    [unroll]
+    for(uint i = 0; i < L4_RGB::NumCoefficients; ++i)
         a.C[i] += b.C[i];
     return a;
 }
@@ -252,6 +504,18 @@ L1 Multiply(L1 a, half b)
     return a;
 }
 
+L0_RGB Multiply(L0_RGB a, half b)
+{
+    a.C[0] *= b;
+    return a;
+}
+
+L0_RGB Multiply(L0_RGB a, half3 b)
+{
+    a.C[0] *= b;
+    return a;
+}
+
 L1_RGB Multiply(L1_RGB a, half3 b)
 {
     [unroll]
@@ -272,6 +536,38 @@ L2_RGB Multiply(L2_RGB a, half3 b)
 {
     [unroll]
     for(uint i = 0; i < L2_RGB::NumCoefficients; ++i)
+        a.C[i] *= b;
+    return a;
+}
+
+L3_RGB Multiply(L3_RGB a, half b)
+{
+    [unroll]
+    for(uint i = 0; i < L3_RGB::NumCoefficients; ++i)
+        a.C[i] *= b;
+    return a;
+}
+
+L3_RGB Multiply(L3_RGB a, half3 b)
+{
+    [unroll]
+    for(uint i = 0; i < L3_RGB::NumCoefficients; ++i)
+        a.C[i] *= b;
+    return a;
+}
+
+L4_RGB Multiply(L4_RGB a, half b)
+{
+    [unroll]
+    for(uint i = 0; i < L4_RGB::NumCoefficients; ++i)
+        a.C[i] *= b;
+    return a;
+}
+
+L4_RGB Multiply(L4_RGB a, half3 b)
+{
+    [unroll]
+    for(uint i = 0; i < L4_RGB::NumCoefficients; ++i)
         a.C[i] *= b;
     return a;
 }
@@ -384,6 +680,16 @@ L1 ProjectOntoL1(half3 direction, half value)
     return sh;
 }
 
+L0_RGB ProjectOntoL0_RGB(half3 direction, half3 value)
+{
+    L0_RGB sh;
+    
+    // L0 - constant term only, direction independent
+    sh.C[0] = BasisL0 * value;
+    
+    return sh;
+}
+
 L1_RGB ProjectOntoL1_RGB(half3 direction, half3 value)
 {
     L1_RGB sh;
@@ -486,12 +792,28 @@ half3 DotProduct(L2_RGB a, L2_RGB b)
     return result;
 }
 
+half3 DotProduct(L4_RGB a, L4_RGB b)
+{
+    half3 result = 0.0;
+    [unroll]
+    for(uint i = 0; i < L4_RGB::NumCoefficients; ++i)
+        result += a.C[i] * b.C[i];
+
+    return result;
+}
+
 // Projects a delta in a direction onto SH and calculates the dot product with a set of L1 SH coefficients.
 // Can be used to "look up" a value from SH coefficients in a particular direction.
 half Evaluate(L1 sh, half3 direction)
 {
     L1 projectedDelta = ProjectOntoL1(direction, 1.0);
     return DotProduct(projectedDelta, sh);
+}
+
+half3 Evaluate(L0_RGB sh, half3 direction)
+{
+    // L0 is direction independent, just return the constant term
+    return sh.C[0] * BasisL0;
 }
 
 half3 Evaluate(L1_RGB sh, half3 direction)
@@ -511,6 +833,71 @@ half Evaluate(L2 sh, half3 direction)
 half3 Evaluate(L2_RGB sh, half3 direction)
 {
     L2_RGB projectedDelta = ProjectOntoL2_RGB(direction, 1.0);
+    return DotProduct(projectedDelta, sh);
+}
+
+
+// Simplified L3_RGB projection (basic implementation)
+L3_RGB ProjectOntoL3_RGB(half3 direction, half3 value)
+{
+    L3_RGB sh = L3_RGB::Zero();
+    
+    // Include L0, L1, L2 terms (same as L2)
+    sh.C[0] = BasisL0 * value;
+    sh.C[1] = BasisL1 * direction.y * value;
+    sh.C[2] = BasisL1 * direction.z * value;
+    sh.C[3] = BasisL1 * direction.x * value;
+    sh.C[4] = BasisL2_MN2 * direction.x * direction.y * value;
+    sh.C[5] = BasisL2_MN1 * direction.y * direction.z * value;
+    sh.C[6] = BasisL2_M0 * (3 * direction.z * direction.z - 1) * value;
+    sh.C[7] = BasisL2_M1 * direction.x * direction.z * value;
+    sh.C[8] = BasisL2_M2 * (direction.x * direction.x - direction.y * direction.y) * value;
+    
+    // Simplified L3 terms (basic cubic approximations)
+    half x = direction.x, y = direction.y, z = direction.z;
+    sh.C[9] = BasisL3_MN3 * x * y * (x * x - 3 * y * y) * value;
+    sh.C[10] = BasisL3_MN2 * x * y * z * value;
+    sh.C[11] = BasisL3_MN1 * y * (5 * z * z - 1) * value;
+    sh.C[12] = BasisL3_M0 * z * (5 * z * z - 3) * value;
+    sh.C[13] = BasisL3_M1 * x * (5 * z * z - 1) * value;
+    sh.C[14] = BasisL3_M2 * z * (x * x - y * y) * value;
+    sh.C[15] = BasisL3_M3 * x * (x * x - 3 * y * y) * value;
+    
+    return sh;
+}
+
+// Simplified L4_RGB projection (basic implementation)  
+L4_RGB ProjectOntoL4_RGB(half3 direction, half3 value)
+{
+    L4_RGB sh = L4_RGB::Zero();
+    
+    // Include all L0-L3 terms
+    L3_RGB l3 = ProjectOntoL3_RGB(direction, value);
+    for (uint i = 0; i < 16; ++i)
+    {
+        sh.C[i] = l3.C[i];
+    }
+    
+    // Simplified L4 terms (basic quartic approximations)
+    half x = direction.x, y = direction.y, z = direction.z;
+    half x2 = x * x, y2 = y * y, z2 = z * z;
+    
+    sh.C[16] = BasisL4_MN4 * x * y * (x2 - y2) * value;
+    sh.C[17] = BasisL4_MN3 * x * y * z * (x2 - y2) * value;  
+    sh.C[18] = BasisL4_MN2 * x * y * (7 * z2 - 1) * value;
+    sh.C[19] = BasisL4_MN1 * y * z * (7 * z2 - 3) * value;
+    sh.C[20] = BasisL4_M0 * (35 * z2 * z2 - 30 * z2 + 3) * value;
+    sh.C[21] = BasisL4_M1 * x * z * (7 * z2 - 3) * value;
+    sh.C[22] = BasisL4_M2 * (x2 - y2) * (7 * z2 - 1) * value;
+    sh.C[23] = BasisL4_M3 * x * z * (x2 - 3 * y2) * value;
+    sh.C[24] = BasisL4_M4 * (x2 * (x2 - 3 * y2) - y2 * (3 * x2 - y2)) * value;
+    
+    return sh;
+}
+
+half3 Evaluate(L4_RGB sh, half3 direction)
+{
+    L4_RGB projectedDelta = ProjectOntoL4_RGB(direction, 1.0);
     return DotProduct(projectedDelta, sh);
 }
 
@@ -635,6 +1022,21 @@ void ApproximateDirectionalLight(L1_RGB sh, out half3 direction, out half3 color
 {
     direction = OptimalLinearDirection(sh);
     L1_RGB dirSH = ProjectOntoL1_RGB(direction, 1.0);
+    dirSH.C[0] = 0.0;
+    color = DotProduct(dirSH, sh) * (867.0 / (316.0 * Pi));
+}
+
+void ApproximateDirectionalLight(L2_RGB sh, out half3 direction, out half3 color)
+{
+    // Extract L1 coefficients for direction estimation
+    L1_RGB l1_sh;
+    l1_sh.C[0] = sh.C[0];
+    l1_sh.C[1] = sh.C[1];
+    l1_sh.C[2] = sh.C[2];
+    l1_sh.C[3] = sh.C[3];
+    
+    direction = OptimalLinearDirection(l1_sh);
+    L2_RGB dirSH = ProjectOntoL2_RGB(direction, 1.0);
     dirSH.C[0] = 0.0;
     color = DotProduct(dirSH, sh) * (867.0 / (316.0 * Pi));
 }

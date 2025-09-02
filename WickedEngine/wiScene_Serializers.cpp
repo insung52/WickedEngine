@@ -2797,6 +2797,13 @@ namespace wi::scene
 				archive >> grid_max;
 				archive >> smooth_backface;
 			}
+			
+			if (archive.GetVersion() >= 94) // New version for SH level
+			{
+				uint32_t sh_level_uint;
+				archive >> sh_level_uint;
+				sh_level = (SHLevel)sh_level_uint;
+			}
 
 			wi::vector<uint8_t> data;
 
@@ -2857,6 +2864,12 @@ namespace wi::scene
 				archive << grid_min;
 				archive << grid_max;
 				archive << smooth_backface;
+			}
+			
+			if (archive.GetVersion() >= 94) // New version for SH level
+			{
+				uint32_t sh_level_uint = (uint32_t)sh_level;
+				archive << sh_level_uint;
 			}
 
 			wi::vector<uint8_t> data;

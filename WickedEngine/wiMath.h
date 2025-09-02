@@ -29,6 +29,31 @@
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
+// Add missing PointOnLineSegmentNearestPoint function to Internal namespace
+namespace DirectX {
+namespace Internal {
+inline XMVECTOR PointOnLineSegmentNearestPoint(_In_ FXMVECTOR S1, _In_ FXMVECTOR S2, _In_ FXMVECTOR P)
+{
+    XMVECTOR Dir = XMVectorSubtract(S2, S1);
+    XMVECTOR Projection = XMVectorSubtract(XMVector3Dot(P, Dir), XMVector3Dot(S1, Dir));
+    XMVECTOR LengthSq = XMVector3Dot(Dir, Dir);
+
+    XMVECTOR t = XMVectorMultiply(Projection, XMVectorReciprocal(LengthSq));
+    XMVECTOR Point = XMVectorMultiplyAdd(t, Dir, S1);
+
+    // t < 0
+    XMVECTOR SelectS1 = XMVectorLess(Projection, XMVectorZero());
+    Point = XMVectorSelect(Point, S1, SelectS1);
+
+    // t > 1
+    XMVECTOR SelectS2 = XMVectorGreater(Projection, LengthSq);
+    Point = XMVectorSelect(Point, S2, SelectS2);
+
+    return Point;
+}
+} // namespace Internal
+} // namespace DirectX
+
 namespace wi::math
 {
 	inline constexpr XMFLOAT4X4 IDENTITY_MATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);

@@ -33,6 +33,7 @@ public:
 	wi::gui::Slider ddgiRayCountSlider;
 	wi::gui::Slider ddgiBlendSpeedSlider;
 	wi::gui::Slider ddgiSmoothBackfaceSlider;
+	wi::gui::ComboBox ddgiSHLevelCombo;
 	wi::gui::CheckBox vxgiCheckBox;
 	wi::gui::ComboBox vxgiDebugCombo;
 	wi::gui::CheckBox vxgiReflectionsCheckBox;

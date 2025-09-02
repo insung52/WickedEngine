@@ -199,6 +199,16 @@ namespace wi::scene
 			float3 grid_min = float3(-1, -1, -1);
 			float3 grid_max = float3(1, 1, 1);
 			float smooth_backface = 0.01f; // smoothness of backface test
+			
+			// SH level configuration
+			enum SHLevel {
+				SH_L0 = 0,  // 1 coefficient  (DC only)
+				SH_L1 = 1,  // 4 coefficients (linear)  
+				SH_L2 = 2,  // 9 coefficients (quadratic)
+				SH_L3 = 3,  // 16 coefficients (cubic)
+				SH_L4 = 4   // 25 coefficients (quartic)
+			};
+			SHLevel sh_level = SH_L1;  // Default to L1 (4 coefficients)
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;

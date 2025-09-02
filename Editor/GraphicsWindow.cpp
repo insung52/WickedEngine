@@ -269,6 +269,23 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ddgiSmoothBackfaceSlider);
 
+	ddgiSHLevelCombo.Create("DDGI SH Level: ");
+	ddgiSHLevelCombo.SetTooltip("Select Spherical Harmonics coefficient level for DDGI (L0=1, L1=4, L2=9, L3=16, L4=25 coefficients)");
+	ddgiSHLevelCombo.AddItem("L0 (1 coeff)", 0);
+	ddgiSHLevelCombo.AddItem("L1 (4 coeff)", 1);
+	ddgiSHLevelCombo.AddItem("L2 (9 coeff)", 2);
+	ddgiSHLevelCombo.AddItem("L3 (16 coeff)", 3);
+	ddgiSHLevelCombo.AddItem("L4 (25 coeff)", 4);
+	ddgiSHLevelCombo.SetSize(XMFLOAT2(wid, itemheight));
+	ddgiSHLevelCombo.SetPos(XMFLOAT2(x, y += step));
+	ddgiSHLevelCombo.OnSelect([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		scene.ddgi.sh_level = static_cast<wi::scene::Scene::DDGI::SHLevel>(args.iValue);
+		// Reset DDGI to apply new SH level
+		scene.ddgi.frame_index = 0;
+		});
+	AddWidget(&ddgiSHLevelCombo);
+
 	ddgiX.Create("");
 	ddgiX.SetTooltip("Probe count in X dimension.");
 	ddgiX.SetDescription("DDGI Probes: ");
@@ -1821,6 +1838,7 @@ void GraphicsWindow::ResizeLayout()
 		ddgiRayCountSlider.SetVisible(false);
 		ddgiBlendSpeedSlider.SetVisible(false);
 		ddgiSmoothBackfaceSlider.SetVisible(false);
+		ddgiSHLevelCombo.SetVisible(false);
 		vxgiDebugCombo.SetVisible(false);
 		vxgiCheckBox.SetVisible(false);
 		vxgiReflectionsCheckBox.SetVisible(false);
@@ -1846,6 +1864,8 @@ void GraphicsWindow::ResizeLayout()
 		ddgiBlendSpeedSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetVisible(true);
 		ddgiSmoothBackfaceSlider.SetValue(editor->GetCurrentScene().ddgi.smooth_backface);
+		ddgiSHLevelCombo.SetVisible(true);
+		ddgiSHLevelCombo.SetSelected(static_cast<int>(editor->GetCurrentScene().ddgi.sh_level));
 		vxgiDebugCombo.SetVisible(true);
 		vxgiCheckBox.SetVisible(true);
 		vxgiReflectionsCheckBox.SetVisible(true);
@@ -1869,6 +1889,7 @@ void GraphicsWindow::ResizeLayout()
 		layout.add(ddgiRayCountSlider);
 		layout.add(ddgiBlendSpeedSlider);
 		layout.add(ddgiSmoothBackfaceSlider);
+		layout.add(ddgiSHLevelCombo);
 
 		layout.jump();
 
